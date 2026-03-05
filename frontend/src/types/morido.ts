@@ -335,3 +335,43 @@ export interface TimeseriesData {
   weeks: WeeklyEntry[];
   pending_count: number;
 }
+
+// ──── NDVI 変化検出 ────
+
+export interface ChangeCandidate {
+  latitude: number;
+  longitude: number;
+  ndvi_before: number;
+  ndvi_after: number;
+  ndvi_change: number;
+  risk_score: number;
+  area_m2: number;
+  pixel_count: number;
+}
+
+export interface ChangeDetectionSceneInfo {
+  scene_id: string;
+  datetime: string;
+  cloud_cover: number | null;
+}
+
+export interface ChangeDetectionResult {
+  before_scene: ChangeDetectionSceneInfo;
+  after_scene: ChangeDetectionSceneInfo;
+  parameters: {
+    bbox: number[];
+    ndvi_threshold: number;
+    overview_factor: number;
+    resolution_m: number;
+    min_cluster_pixels: number;
+  };
+  candidates: ChangeCandidate[];
+  stats: {
+    total_pixels: number;
+    changed_pixels: number;
+    candidate_clusters: number;
+    processing_time_sec: number;
+    image_shape: number[];
+  };
+  error?: string;
+}

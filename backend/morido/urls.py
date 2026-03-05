@@ -26,6 +26,8 @@ urlpatterns = [
     path("satellite/scenes/<str:scene_id>/", views.satellite_scene_detail, name="satellite-scene-detail"),
     # レポート
     path("reports/monthly/", views.monthly_report, name="monthly-report"),
+    # NDVI 変化検出
+    path("change-detection/run/", views.run_change_detection_view, name="change-detection-run"),
     # DRF Router
     path("", include(router.urls)),
 ]

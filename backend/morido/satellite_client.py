@@ -7,7 +7,7 @@ Element84 Earth Search STAC API (Sentinel-2 L2A) を利用
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
@@ -81,9 +81,9 @@ def search_sentinel2_scenes(
 
     # デフォルト期間: 直近 90 日
     if date_to is None:
-        date_to = datetime.utcnow().strftime("%Y-%m-%d")
+        date_to = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if date_from is None:
-        dt_from = datetime.utcnow() - timedelta(days=90)
+        dt_from = datetime.now(timezone.utc) - timedelta(days=90)
         date_from = dt_from.strftime("%Y-%m-%d")
 
     search_body = {

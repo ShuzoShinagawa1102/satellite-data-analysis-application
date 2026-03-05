@@ -553,3 +553,71 @@ def dashboard_timeseries(request):
         "weeks": sorted(week_map.values(), key=lambda x: x["week"]),
         "pending_count": pending_count,
     })
+
+
+# ──── NDVI 変化検出 ────
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def run_change_detection_view(request):
+    """
+    POST /api/v1/change-detection/run/ – NDVI 時系列変化検出
+
+    Body (JSON):
+        auto_bbox (bool/str): true なら登録疑義地点から bbox を自動計算
+        bbox (str|list): "lon_min,lat_min,lon_max,lat_max" or [lon_min, ...]
+        before_start / before_end: 前期の日付範囲 (YYYY-MM-DD)
+        after_start / after_end: 後期の日付範囲
+        ndvi_threshold (float): ΔNDVI 閾値 (default: -0.25)
+        max_cloud_cover (float): 最大雲量 % (default: 20)
+        overview_factor (int): 解像度間引き率 (default: 8 → 80m)
+    """
+    from .change_detection import run_change_detection
+
+    params = request.data
+
+    # bbox 解決
+    bbox = None
+    auto_bbox = params.get("auto_bbox", "")
+    if str(auto_bbox).lower() == "true":
+        bbox = build_bbox_from_sites(DetectedSite.objects.all())
+    elif "bbox" in params:
+        try:
+            bbox_val = params["bbox"]
+            if isinstance(bbox_val, str):
+                bbox = [float(x) for x in bbox_val.split(",")]
+            elif isinstance(bbox_val, list):
+                bbox = [float(x) for x in bbox_val]
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "bbox は [lon_min, lat_min, lon_max, lat_max] 形式で指定してください"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    if bbox is None:
+        from .satellite_client import DEFAULT_BBOX_TOKYO
+        bbox = DEFAULT_BBOX_TOKYO
+
+    result = run_change_detection(
+        bbox=bbox,
+        before_start=params.get("before_start"),
+        before_end=params.get("before_end"),
+        after_start=params.get("after_start"),
+        after_end=params.get("after_end"),
+        ndvi_threshold=float(params.get("ndvi_threshold", -0.25)),
+        max_cloud_cover=float(params.get("max_cloud_cover", 20)),
+        overview_factor=int(params.get("overview_factor", 8)),
+        min_cluster_pixels=int(params.get("min_cluster_pixels", 3)),
+    )
+
+    if "error" in result and not result.get("candidates"):
+        err_msg = result.get("error", "")
+        err_status = (
+            status.HTTP_502_BAD_GATEWAY
+            if "読み取り" in err_msg or "失敗" in err_msg
+            else status.HTTP_400_BAD_REQUEST
+        )
+        return Response(result, status=err_status)
+
+    return Response(result)

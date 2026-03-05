@@ -20,6 +20,7 @@ import type {
   SiteGeoJSON,
   SatelliteSearchResult,
   TimeseriesData,
+  ChangeDetectionResult,
 } from "../types/morido";
 
 const api = axios.create({ baseURL: "/api/v1" });
@@ -162,3 +163,25 @@ export const fetchSatelliteSceneDetail = (sceneId: string): Promise<Record<strin
 
 export const fetchDashboardTimeseries = (weeks = 12): Promise<TimeseriesData> =>
   api.get("/dashboard/timeseries/", { params: { weeks } }).then((r) => r.data);
+
+// ──── NDVI 変化検出 ────
+
+export interface ChangeDetectionParams {
+  auto_bbox?: string;
+  bbox?: string;
+  before_start?: string;
+  before_end?: string;
+  after_start?: string;
+  after_end?: string;
+  ndvi_threshold?: number;
+  max_cloud_cover?: number;
+  overview_factor?: number;
+  min_cluster_pixels?: number;
+}
+
+export const runChangeDetection = (
+  params: ChangeDetectionParams = {}
+): Promise<ChangeDetectionResult> =>
+  api
+    .post("/change-detection/run/", params, { timeout: 120_000 })
+    .then((r) => r.data);
